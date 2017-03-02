@@ -98,12 +98,17 @@
             .append('g')
             .attr('class', 'chart');
 
-        var keys = data.columns.slice(1); // female, male
+        var keys = data.columns.slice(2); // female, male
+        //console.log(keys)
+
+        var allData = filterData(data, "AgeGroup", "All");
+        
+        console.log(allData);
 
         var x0 = d3.scaleBand() //Class
                 .rangeRound([0, width])
                 .paddingInner(0.1)
-                .domain(data.map(function(d) {return d.Pclass;}));
+                .domain(allData.map(function(d) {return d.Pclass;}));
 
         var x1 = d3.scaleBand() //Sex 
                 .padding(0.05)
@@ -112,7 +117,7 @@
         var y = d3.scaleLinear() 
                 // Survival rate - but that value does not have its own column now
                 .rangeRound([height, 0])
-                .domain([0, d3.max(data, function(d) { 
+                .domain([0, d3.max(allData, function(d) { 
                   return d3.max(keys,
                     function(key) { return d[key]; }); })]).nice(); // nice makes axis end in round number
         
@@ -126,7 +131,7 @@
         //d3.select("svg")
         g.append("g")
             .selectAll("g")
-            .data(data)
+            .data(allData)
             .enter().append("g")
             .attr("transform", function(d) { return "translate("
               + x0(d.Pclass) + ",0)"; })
@@ -137,7 +142,8 @@
             .attr("x", function(d) { return x1(d.key); })
             .attr("y", function(d) { return y(d.value); })
             .attr("width", x1.bandwidth())
-            .attr("height", function(d) { return height - y(d.value); })
+            .attr("height", function(d) { return height - 
+                y(d.value); })
             .attr("fill", function(d) { return z(d.key); });
 
         g.append("g")
@@ -189,15 +195,7 @@
             .attr("dy", "0.32em")
             .text(function(d) { return d; });    
 
-        function draw_next(data) {
-            //console.log(data); //look at data first         
-            data.forEach(function(d, i, columns) {
-              for (var i = 1, n = columns.length; i < n; ++i)
-                d[columns[i]] = +d[columns[i]]; // makes Survived values numeric
-              return d;
-            });
-
-            //console.log(data);  //look after I correct data
+//no need for new function, using all one dataset.
 
             var ages = ['All','0-15','16-30','31-45','46-60','61-80']
             //figure out how to do this with a formula
@@ -243,15 +241,6 @@
                 }
 
 
-                function filterData( data, variable, value) {
-                    var newData = data.filter(function(row) {
-                        if( row[variable] == value ) {
-                            return row;
-                        };
-                    } );
-                    return newData;
-                }   
-
                 // show the text in the console
                 var newData = filterData(data, "AgeGroup", t);
                 console.log(t);
@@ -261,6 +250,11 @@
                 d3.selectAll( "svg > *").remove() 
                 
                 // var x0, x1, and z are carried over from initial call.
+
+                var x0 = d3.scaleBand() //Class
+                    .rangeRound([0, width])
+                    .paddingInner(0.1)
+                    .domain(newData.map(function(d) {return d.Pclass;}));
         
                 var y = d3.scaleLinear() 
                         // Survival rate - but that value does not have its own column now
@@ -340,9 +334,7 @@
                     .text(function(d) { return d; });  
 
             })
-          };
-
-          d3.csv("surv_age_class_sex.csv", draw_next);
+         
         };
 
     </script>
@@ -350,6 +342,6 @@
 <body>
   <script type="text/javascript">
   
-  d3.csv("surv_class_sex.csv", draw);
+  d3.csv("surv_age_class_sex.csv", draw);
   </script>
 </html>
