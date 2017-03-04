@@ -32,6 +32,8 @@ Bar charts
 - https://bost.ocks.org/mike/bar/2/
 - https://bost.ocks.org/mike/bar/3/
 - https://bl.ocks.org/mbostock/3019563
+- grouped-stacked bar chart: http://bl.ocks.org/gencay/4629518
+- stacked w/ labels: http://bl.ocks.org/juan-cb/43f10523858abf6053ae
 
 
 CSS:
@@ -52,5 +54,9 @@ Tooltips:
 - http://bl.ocks.org/Caged/6476579
 - https://discussions.udacity.com/t/problems-with-interaction-of-final-project/181141/22
 
-Adding text to plot
+Adding labels/text to plot
 - http://bl.ocks.org/juan-cb/faf62e91e3c70a99a306
+- https://github.com/d3/d3/wiki/SVG-Shapes#svg_text
+
+x vs. dx
+- http://stackoverflow.com/questions/19127035/what-is-the-difference-between-svgs-x-and-dx-attribute
