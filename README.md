@@ -34,7 +34,7 @@ Bar charts
 - https://bl.ocks.org/mbostock/3019563
 - grouped-stacked bar chart: http://bl.ocks.org/gencay/4629518
 - stacked w/ labels: http://bl.ocks.org/juan-cb/43f10523858abf6053ae
-
+- scale.ordinal vs. scaleBand: http://stackoverflow.com/questions/37548408/d3-4-0-rangeroundbands-equivalent
 
 CSS:
 - http://stackoverflow.com/questions/5703552/css-center-text-horizontal-and-vertical-inside-a-div-block 
