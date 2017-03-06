@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <style>
+
+        h2 {
+            text-align: center;
+            font-family: Georgia;
+        }
+
+        p {
+            text-align: left;
+            margin-left: 2cm;
+            font: sans-serif;
+        }
+
+        body {
+            text-align: left;
+            margin-left: .5cm;
+            margin-right: .5cm;
+            font-family: Tahoma;
+        }
+    
+        div.age_buttons {
+            position: fixed;
+            top: 175px;
+            right: 50px;
+        }
+
+        div.age_buttons div {
+            background-color: #D3D3D3;
+            padding: 3px;
+            margin: 7px;
+            text-align: center;
+            vertical-align: middle;
+            /*ref:http://stackoverflow.com/questions/5703552/css-center-text-horizontal-and-vertical-inside-a-div-block */
+            /*border-style: solid;
+            border-width: 2px;
+            /*ref: https://www.w3schools.com/css/css_border.asp*/
+          }
+
+        .axis path, 
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }  
+
+        .axis text {
+            font-family: sans-serif;
+            font-size: 11px;
+        }  
+
+    </style>
+
+    <script>
+ 
+    function filterData( data, variable, value) {
+        var newData = data.filter(function(row) {
+            if( row[variable] == value ) {
+                return row;
+            };
+        } );
+        return newData;
+    }   
+
+    function draw(data) {
+        data.forEach(function(d, i, columns) {
+          for (var i = 1, n = columns.length; i < n; ++i)
+            d[columns[i]] = +d[columns[i]]; // makes Survived values numeric
+          return d;
+        });
+
+        console.log(data);  //look after I correct data
+
+        d3.select('body')
+            .append('h2')
+            .text('Titanic Survival Rates by Class and Sex'); 
+
+        d3.select('body')
+            .append('p')
+            .text('In 1912, the RMS Titanic sank in the North Atlantic Ocean after colliding with an iceberg. Of the 2,224 people people aboard, there were only 706 survivors. The following charts demonstrate how the survival rate differed for passengers depending on their ticket class, sex, and age. Click on the buttons to the right to see how survival rates differed between age groups.');
+
+        //Ref: http://www.titanicfacts.net/titanic-survivors.html
+        //Ref: https://en.wikipedia.org/wiki/RMS_Titanic
+
+        var margin = {top: 50, right: 20, bottom: 50, left: 100},
+            width = 1000 - margin.left - margin.right,
+            height = 500 - margin.left - margin.right;
+
+        var svg = d3.select('body')
+            .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            //ref: https://bl.ocks.org/mbostock/3019563
+            .append('g')
+            .attr('class', 'chart');
+
+        var keys = data.columns.slice(2); // female, male
+        console.log(keys)
+
+        var allData = filterData(data, "AgeGroup", "All");
+        
+        console.log(allData);
+
+        var x0 = d3.scaleBand() //Class
+                .rangeRound([0, width], 0.1)
+                .paddingInner(0.1)
+                .domain(allData.map(function(d) {return d.Pclass;}));
+
+        var x1 = d3.scaleBand() //Sex 
+                .padding(0.05)
+                .domain(keys).rangeRound([0, x0.bandwidth()]); 
+
+        var y = d3.scaleLinear() 
+                // Survival rate - but that value does not have its own column now
+                .rangeRound([height, 0])
+                .domain([0, d3.max(allData, function(d) { 
+                  return d3.max(keys,
+                    function(key) { return d[key]; }); })]).nice(); // nice makes axis end in round number
+        
+        var z = d3.scaleOrdinal() //colors of male/female bars
+                .range(["#98abc5", "#8a89a6"]);
+
+        var g = d3.select("svg")
+                  .append("g")
+                  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        //d3.select("svg")
+        g.append("g")
+            .selectAll("g")
+            .data(allData)
+            .enter().append("g")
+            .attr("transform", function(d) { return "translate("
+              + x0(d.Pclass) + ",0)"; })
+            .selectAll("rect")
+            .data(function(d) { return keys.map(function(key) { return {key: key, value: d[key]}; }); })
+            .enter()
+            .append("rect")
+            .attr("x", function(d) { return x1(d.key); })
+            .attr("y", function(d) { return y(d.value); })
+            .attr("width", x1.bandwidth())
+            .attr("height", function(d) { return height - 
+                y(d.value); })
+            .attr("fill", function(d) { return z(d.key); });
+
+        g.append("g")
+            .attr("class", "axis x")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x0));
+                
+        g.append("text")
+            .attr("fill", "#000")
+            .attr("font-weight", "bold")
+            .attr("x", width/2) 
+            .attr("y", height + margin.bottom/1.25)
+            .style("text-anchor", "middle")
+            .text("Passenger Class");
+            
+        g.append("g")
+            .attr("class", "axis y")
+            .call(d3.axisLeft(y).ticks(10, "%"))
+            
+        g.append("text")
+            .attr("dy", "0.32em")
+            .attr("fill", "#000")
+            .attr("font-weight", "bold")
+            .attr("text-anchor", "start")
+            .attr("transform", "translate("+ -margin.left/1.5 +","+((height+margin.top)/2)+")rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+            .text("Survival Rate (%)");
+
+        var legend = g.append("g")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", 10)
+            .attr("text-anchor", "end")
+            .selectAll("g")
+            .data(keys.slice())
+            .enter()
+            .append("g")
+            .attr("transform", function(d, i) { 
+              return "translate(0," + i * 20 + ")"; 
+            });
+
+        legend.append("rect")
+            .attr("x", width - 19)
+            .attr("width", 19)
+            .attr("height", 19)
+            .attr("fill", z);
+
+        legend.append("text")
+            .attr("x", width - 24)
+            .attr("y", 9.5)
+            .attr("dy", "0.32em")
+            .text(function(d) { return d; });    
+
+//no need for new function, using all one dataset.
+
+            var ages = ['All','0-15','16-30','31-45','46-60','61-80']
+            //figure out how to do this with a formula
+
+            var buttons = d3.select("body")
+                            .append("div")
+                            .attr("class", "age_buttons")
+                            .selectAll("div")
+                            .data(ages) //or distinct?
+                            .enter()
+                            .append("div")
+                            .text(function(d) {
+                                return d;
+                            })
+                            .style("opacity","1");
+
+            //add onclick handler
+            buttons.on("click", function(d) {
+                //set 'unclicked' format
+                d3.select(".age_buttons")
+                    .selectAll("div")
+                    .transition()
+                    .duration(500)
+                    .style("color","black")
+                    .style("background-color", "#D3D3D3");
+
+                d3.select(this)
+                    .transition()
+                    .duration(500)
+                    .style("background-color", "#708090")
+                    .style("color","white");
+
+                // select the text for this button            
+                var t = this.innerText; 
+
+                if( t == 'All' ) {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Class and Sex: All Ages')
+                }
+                else {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Class and Sex: Passengers Aged '+t+' years')
+                }
+
+
+                // show the text in the console
+                var newData = filterData(data, "AgeGroup", t);
+                console.log(t);
+                console.log(newData);
+
+                // remove all elements from the svg (i.e. previous charts)
+                d3.selectAll( "svg > *").remove() 
+                
+                // var x0, x1, and z are carried over from initial call.
+
+                var x0 = d3.scaleBand() //Class
+                    .rangeRound([0, width])
+                    .paddingInner(0.1)
+                    .domain(newData.map(function(d) {return d.Pclass;}));
+        
+                var y = d3.scaleLinear() 
+                        // Survival rate - but that value does not have its own column now
+                        .rangeRound([height, 0])
+                        .domain([0, d3.max(newData, function(d) { 
+                          return d3.max(keys,
+                            function(key) { return d[key]; }); })]).nice(); // nice makes axis end in round number
+                
+                var g = d3.select("svg")
+                          .append("g")
+                          .attr("transform", "translate(" + 
+                            margin.left + "," + margin.top + ")");
+
+                //d3.select("svg")
+                g.append("g")
+                    .selectAll("g")
+                    .data(newData)
+                    .enter().append("g")
+                    .attr("transform", function(d) { return "translate("
+                      + x0(d.Pclass) + ",0)"; })
+                    .selectAll("rect")
+                    .data(function(d) { return keys.map(function(key) { return {key: key, value: d[key]}; }); })
+                    .enter()
+                    .append("rect")
+                    .attr("x", function(d) { return x1(d.key); })
+                    .attr("y", function(d) { return y(d.value); })
+                    .attr("width", x1.bandwidth())
+                    .attr("height", function(d) { return height - y(d.value); })
+                    .attr("fill", function(d) { return z(d.key); });
+
+                g.append("g")
+                    .attr("class", "axis x")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x0));
+                
+                g.append("text")
+                    .attr("x", width/2) 
+                    .attr("y", height + margin.bottom)
+                    .style("text-anchor", "middle")
+                    .text("Passenger Class");
+    //Reference: axes http://www.d3noob.org/2012/12/adding-axis-labels-to-d3js-graph.html
+                    
+                g.append("g")
+                    .attr("class", "axis y")
+                    .call(d3.axisLeft(y).ticks(10, "%"))
+                    
+                g.append("text")
+                    .attr("dy", "0.32em")
+                    .attr("fill", "#000")
+                    .attr("font-weight", "bold")
+                    .attr("text-anchor", "start")
+                    .attr("transform", "translate("+ -margin.left/2 +","+((height+margin.top)/2)+")rotate(-90)")  // text is drawn off the screen top left, move down and out and rotate
+                    .text("Survival Rate (%)");
+
+                var legend = g.append("g")
+                    .attr("font-family", "sans-serif")
+                    .attr("font-size", 10)
+                    .attr("text-anchor", "end")
+                    .selectAll("g")
+                    .data(keys.slice())
+                    .enter()
+                    .append("g")
+                    .attr("transform", function(d, i) { 
+                      return "translate(0," + i * 20 + ")"; 
+                    });
+
+                legend.append("rect")
+                    .attr("x", width - 19)
+                    .attr("width", 19)
+                    .attr("height", 19)
+                    .attr("fill", z);
+
+                legend.append("text")
+                    .attr("x", width - 24)
+                    .attr("y", 9.5)
+                    .attr("dy", "0.32em")
+                    .text(function(d) { return d; });  
+
+            })
+         
+        };
+
+    </script>
+  </head>
+<body>
+  <script type="text/javascript">
+  
+  d3.csv("surv_age_class_sex.csv", draw);
+  </script>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<style>
+        h2 {
+            text-align: center;
+            font-family: Georgia;
+        }
+
+        p {
+            text-align: left;
+            margin-left: 2cm;
+            font: sans-serif;
+        }
+
+        body {
+            text-align: left;
+            margin-left: .5cm;
+            margin-right: .5cm;
+            font-family: Tahoma;
+        }
+    
+        div.class_buttons {
+            position: fixed;
+            top: 150px;
+            left: 10px;
+        }
+
+        div.class_buttons div {
+            background-color: #D3D3D3;
+            padding: 10px; /*size of buttons around text*/
+            margin: 15px; /*vertical space b/t buttons*/
+            text-align: center;
+            vertical-align: middle;
+            /*ref:http://stackoverflow.com/questions/5703552/css-center-text-horizontal-and-vertical-inside-a-div-block */
+            /*border-style: solid;
+            border-width: 2px;
+            /*ref: https://www.w3schools.com/css/css_border.asp*/
+          }
+
+        .axis path, 
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }  
+
+        .axis text {
+            font-family: sans-serif;
+            font-size: 12px;
+        }  
+
+        .toolTip {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                position: absolute;
+                display: none;
+                width: auto;
+                height: auto;
+                background: none repeat scroll 0 0 white;
+                border: 0 none;
+                border-radius: 8px 8px 8px 8px;
+                box-shadow: -3px 3px 15px #888888;
+                color: black;
+                font: 12px sans-serif;
+                padding: 5px;
+                text-align: center;
+        }
+
+	</style>
+	<script src="http://d3js.org/d3.v4.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/1.7.0/d3-legend.min.js"></script> 
+</head>
+<body>
+	<script>
+        d3.select('body')
+            .append('h2')
+            .text('Titanic Survival Rates by Class and Sex'); 
+
+        d3.select('body')
+            .append('p')
+            .text('In 1912, the RMS Titanic sank in the North Atlantic Ocean after colliding with an iceberg. Of the 2,224 people people aboard, only 706 survived. Is the call to save "women and children first" demonstrated by the data? Did socioeconomic status--ticket class--also have an effect on survival rates?')
+        
+        d3.select('body')
+            .append('p')
+            .text('The following charts demonstrate how the survival rate differed for passengers depending on their sex, age, and ticket class. Click on the buttons to the left to see how survival rates differed for passengers depending on the class of their ticket.');
+
+        //Ref: http://www.titanicfacts.net/titanic-survivors.html
+        //Ref: https://en.wikipedia.org/wiki/RMS_Titanic
+
+        var margin = {
+            top: 20,
+            right: 150,
+            bottom: 30,
+            left: 150
+        },
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
+        var x0 = d3.scaleBand( )
+                .rangeRound( [ 0, width ])
+                .paddingInner(0.15);
+
+        var x1 = d3.scaleBand( )
+                .padding(0.05);
+
+        var y = d3.scaleLinear( )
+                .range( [ height, 0 ] );
+
+        var color = d3.scaleOrdinal( )
+                //.range( [ "black","grey" ,"red", "green"] );
+                .range( [ "#bdbdbd", "#f0f0f0", "#bcbddc", "#efedf5"] ); //everybody's pale (original)
+
+        var svg = d3.select( "body" )
+                .append( "svg" )
+                .attr( "width", width + margin.left + margin.right )
+                .attr( "height", height + margin.top + margin.bottom ).append( "g" )
+                .attr( "transform", "translate(" + margin.left + "," + margin.top + ")" )
+                .attr('id','svg');
+
+        var yBegin;
+
+        var divTooltip = d3.select("body")
+            .append("div")
+            .attr("class", "toolTip");
+    
+        d3.csv( "titanic_class_wide.csv", function( error, original_data ) {
+
+            function filterData( data, variable, value ) {
+                var newData = data.filter( function( row ) {
+                    if( row[ variable ] == value ) {
+                        return row;
+                    };
+                } );
+                return newData;
+            }
+            console.log(original_data);
+
+            var data = filterData(original_data, "Pclass", "All" );
+            console.log( data );
+
+            var innerColumns = {
+                "column1": [ "Survived Female", "Died Female" ], 
+                "column2": [ "Survived Male", "Died Male" ]
+            };
+
+            var columnHeaders = [ "Survived Female", "Died Female", "Survived Male", "Died Male" ]
+
+            console.log(columnHeaders);
+            //console.log(NcolHeaders)
+/*
+            color.domain( d3.keys( data[ 0 ] ).filter( function( key ) {
+                return key !== "AgeGroup";
+            } ) ); 
+*/
+            data.forEach( function( d ) {
+                var yColumn = new Array( );
+                d.columnDetails = columnHeaders.map( function( name ) {
+                    for( ic in innerColumns ) {
+                        if( $.inArray( name, innerColumns[ ic ] ) >= 0 ) {
+                            if( !yColumn[ ic ] ) {
+                                yColumn[ ic ] = 0;
+                            }
+                            yBegin = yColumn[ ic ];
+                            yColumn[ ic ] += +d[ name ];
+                            return {
+                                name: name,
+                                column: ic,
+                                yBegin: yBegin,
+                                yEnd: +d[ name ] + yBegin,
+                            };
+                        }
+                    }
+                } );
+                
+                d.total = d3.max( d.columnDetails, function( d ) {
+                    return d.yEnd;
+                } );
+            } );
+
+            x0.domain( data.map( function( d ) {
+                return d.AgeGroup;
+            } ) );
+            
+            x1.domain( d3.keys( innerColumns ) )
+                //.rangeRoundBands( [ 0, x0.rangeBand( ) ] );
+                .rangeRound( [ 0, x0.bandwidth( ) ] );
+
+            y.domain( [ 0, d3.max( data, function( d ) {
+                return d.total;
+            } ) ] );
+
+            svg.append( "g" )
+                .attr( "class", "x axis" )
+                .attr( "transform", "translate(0," + height + ")" )
+                .call(d3.axisBottom(x0));
+
+            svg.append( "g" )
+                .attr( "class", "y axis" )
+                .call( d3.axisLeft(y).ticks(10, "%") )
+                .append( "text" )
+                .attr( "transform", "rotate(-90)" )
+                .attr( "y", 6 )
+                .attr( "dy", ".7em" )
+                .style( "text-anchor", "end" )
+                .text( "" );
+
+            var project_stackedbar = svg.selectAll( ".project_stackedbar" ).data( data )
+                .enter( )
+                .append( "g" )
+                .attr( "class", "g" )
+                .attr( "transform", function( d ) {
+                    return "translate(" + x0( d.AgeGroup ) + ",0)";
+                } );
+
+            project_stackedbar.selectAll( "rect" )
+                .data( function( d ) {
+                    return d.columnDetails;
+                } )
+                .enter( )
+                .append( "rect" )
+                .attr( "width", x1.bandwidth( ) )
+                .attr( "x", function( d ) {
+                    return x1( d.column );
+                } )
+                .attr( "y", function( d ) {
+                    return y( d.yEnd );
+                } )
+                .attr( "height", function( d ) {
+                    return y( d.yBegin ) - y( d.yEnd );
+                } )
+                .style( "fill", function( d ) {
+                    return color( d.name );
+                } );
+
+//Mouseover tooltips: http://bl.ocks.org/juan-cb/43f10523858abf6053ae
+            project_stackedbar.on("mousemove", function(d){
+                //debugger;
+                //console.log(d);
+                divTooltip.style("left", d3.event.pageX+10+"px");
+                divTooltip.style("top", d3.event.pageY-25+"px");
+                divTooltip.style("display", "inline-block");
+                var elements = document.querySelectorAll(':hover');
+                l = elements.length
+                l = l-1
+                element = elements[l].__data__
+                value = element.yEnd - element.yBegin
+                if (element.name == 'Survived Female') {
+                    divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Female Survivors: "+Math.round(d['NSurv Female'])+"<br>"+"Female Total: "+Math.round(d['Total Female']));
+                } else if (element.name == 'Died Female') {
+                    divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Female Deaths: "+Math.round(d['NDied Female'])+"<br>"+"Female Total: "+Math.round(d['Total Female']));
+                } else if (element.name == 'Survived Male') {
+                    divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Male Survivors: "+Math.round(d['NSurv Male'])+"<br>"+"Male Total: "+Math.round(d['Total Male']));
+                } else if (element.name == 'Died Male') {
+                    divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Male Deaths: "+Math.round(d['NDied Male'])+"<br>"+"Male Total: "+Math.round(d['Total Male']));
+                }  
+            });
+
+            project_stackedbar.on("mouseout", function(d){
+                divTooltip.style("display", "none");
+            });
+
+//Legend
+            var legend = svg.selectAll(".legend")
+                .data(columnHeaders.slice())
+                .enter()
+                .append("g")
+                .attr("class","legend")
+                .attr("transform", function(d, i) { 
+                    //return "translate(" + i * 20 + ",0)";
+                    return "translate(0," + i * 20 + ")"; //num determines how much space between labels
+                });
+
+            legend.append("rect") //num is width/height of rectangle
+                .attr("x", width+125)
+                //.attr("y", -20)
+                .attr("width", 19)
+                .attr("height", 19)
+                .attr("fill", color);
+
+            legend.append("text")
+                .attr("x", width + 120)
+                .attr("y", 9.5)
+                .attr("dy", "0.32em")
+                .style("text-anchor", "end")
+                .text(function(d) { return d; }); 
+
+
+//ADDING THE BUTTONS AND VARIABLE AGE DATA
+
+            var classes = ['All','1st','2nd','3rd']
+           
+            var buttons = d3.select("body")
+                            .append("div")
+                            .attr("class", "class_buttons")
+                            .selectAll("div")
+                            .data(classes) //or distinct?
+                            .enter()
+                            .append("div")
+                            .text(function(d) {
+                                return d;
+                            })
+                            .style("opacity","1");
+
+            //add onclick handler
+            buttons.on("click", function(d) {
+                //set 'unclicked' format
+                d3.select(".class_buttons")
+                    .selectAll("div")
+                    .transition()
+                    .duration(500)
+                    .style("color","black")
+                    .style("background-color", "#D3D3D3");
+
+                d3.select(this)
+                    .transition()
+                    .duration(500)
+                    .style("background-color", "#708090")
+                    .style("color","white");
+
+                // select the text for this button            
+                var t = this.innerText; 
+
+                if( t == 'All' ) {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Age and Sex: All Passenger Classes')
+                }
+                else {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Age and Sex: '+t+'  class passengers')
+                }
+
+                // show the text in the console
+                var newData = filterData(original_data, "Pclass", t);
+                console.log(t);
+                console.log(newData);
+
+                // remove all elements from the svg (i.e. previous charts)
+                d3.selectAll( "#svg > *").remove() 
+
+                var yBegin;
+
+/*
+                color.domain( d3.keys( newData[ 0 ] ).filter( function( key ) {
+                    return key !== "AgeGroup";
+                } ) );
+*/
+                //newData or data?
+                newData.forEach( function( d ) {
+                    var yColumn = new Array( );
+                    d.columnDetails = columnHeaders.map( function( name ) {
+                        for( ic in innerColumns ) {
+                            if( $.inArray( name, innerColumns[ ic ] ) >= 0 ) {
+                                if( !yColumn[ ic ] ) {
+                                    yColumn[ ic ] = 0;
+                                }
+                                yBegin = yColumn[ ic ];
+                                yColumn[ ic ] += +d[ name ];
+                                return {
+                                    name: name,
+                                    column: ic,
+                                    yBegin: yBegin,
+                                    yEnd: +d[ name ] + yBegin,
+                                };
+                            }
+                        }
+                    } );
+
+                    d.total = d3.max( d.columnDetails, function( d ) {
+                        return d.yEnd;
+                    } );
+                } );
+
+                x0.domain(newData.map( function( d ) {
+                    return d.AgeGroup;
+                } ) );
+                
+                x1.domain(d3.keys( innerColumns ) )
+                    //.rangeRoundBands( [ 0, x0.rangeBand( ) ] );
+                    .rangeRound( [ 0, x0.bandwidth( ) ] );
+
+                y.domain( [ 0, d3.max( newData, function( d ) {
+                    return d.total;
+                } ) ] );
+
+                svg.append( "g" )
+                    .attr( "class", "x axis" )
+                    .attr( "transform", "translate(0," + height + ")" )
+                    //.call( xAxis );
+                    .call(d3.axisBottom(x0));
+
+                svg.append( "g" )
+                    .attr( "class", "y axis" )
+                    //.call( yAxis )
+                    .call( d3.axisLeft(y).ticks(10, "%") )
+                    .append( "text" )
+                    .attr( "transform", "rotate(-90)" )
+                    .attr( "y", 6 )
+                    .attr( "dy", ".7em" )
+                    .style( "text-anchor", "end" )
+                    .text( "" );
+
+                var project_stackedbar = svg.selectAll( ".project_stackedbar" )
+                        .data( newData )
+                        .enter( )
+                        .append( "g" )
+                        .attr( "class", "g" ).attr( "transform", function( d ) {
+                            return "translate(" + x0( d.AgeGroup ) + ",0)";
+                        } );
+
+                project_stackedbar.selectAll( "rect" )
+                    .data( function( d ) {
+                        return d.columnDetails;
+                    } )
+                    .enter( )
+                    .append( "rect" )
+                    //.attr( "width", x1.rangeBand( ) )
+                    .attr( "width", x1.bandwidth( ) )
+                    .attr( "x", function( d ) {
+                        return x1( d.column );
+                    } )
+                    .attr( "y", function( d ) {
+                        return y( d.yEnd );
+                    } )
+                    .attr( "height", function( d ) {
+                        return y( d.yBegin ) - y( d.yEnd );
+                    } )
+                    .style( "fill", function( d ) {
+                        return color( d.name );
+                    } );
+
+    //Mouseover tooltips: http://bl.ocks.org/juan-cb/43f10523858abf6053ae
+                project_stackedbar.on("mousemove", function(d){
+                    divTooltip.style("left", d3.event.pageX+10+"px");
+                    divTooltip.style("top", d3.event.pageY-25+"px");
+                    divTooltip.style("display", "inline-block");
+                    var elements = document.querySelectorAll(':hover');
+                    l = elements.length
+                    l = l-1
+                    element = elements[l].__data__
+                    value = element.yEnd - element.yBegin
+                    if (element.name == 'Survived Female') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Female Survivors: "+Math.round(d['NSurv Female'])+"<br>"+"Female Total: "+Math.round(d['Total Female']));
+                    } else if (element.name == 'Died Female') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Female Deaths: "+Math.round(d['NDied Female'])+"<br>"+"Female Total: "+Math.round(d['Total Female']));
+                    } else if (element.name == 'Survived Male') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Male Survivors: "+Math.round(d['NSurv Male'])+"<br>"+"Male Total: "+Math.round(d['Total Male']));
+                    } else if (element.name == 'Died Male') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Male Deaths: "+Math.round(d['NDied Male'])+"<br>"+"Male Total: "+Math.round(d['Total Male']));
+                    }   
+                });
+
+                project_stackedbar.on("mouseout", function(d){
+                    divTooltip.style("display", "none");
+                });
+
+    //Legend
+                var legend = svg.selectAll(".legend")
+                    .data(columnHeaders.slice())
+                    .enter()
+                    .append("g")
+                    .attr("class","legend")
+                    .attr("transform", function(d, i) { 
+                        //return "translate(" + i * 20 + ",0)";
+                        return "translate(0," + i * 20 + ")"; //num determines how much space between labels
+                    });
+
+                legend.append("rect") //num is width/height of rectangle
+                    .attr("x", width+125)
+                    //.attr("y", -20)
+                    .attr("width", 19)
+                    .attr("height", 19)
+                    .attr("fill", color);
+
+                legend.append("text")
+                    .attr("x", width + 120)
+                    .attr("y", 9.5)
+                    .attr("dy", "0.32em")
+                    .style("text-anchor", "end")
+                    .text(function(d) { return d; }); 
+            });
+
+        });
+
+	</script>
+</body>
+
+</html>
