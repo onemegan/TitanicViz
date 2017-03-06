@@ -13,10 +13,12 @@ Observations & takeaways:
 - Women have higher survival in all 3 classes. 
 - Rich people, women, and old folk had precedence
 - Age groups 0-15 and 61-80 have a much different pattern than the overall survival rates
+- I want to see real numbers.
  
 Suggestions:
 - Show how many passengers are in each group, percentages can be deceiving. 
 - Might the surprising survival rates simply be because of small  sample sizes.
+- Show bigger gap between classes.
 
 
 ## Resources
@@ -35,6 +37,7 @@ Bar charts
 - grouped-stacked bar chart: http://bl.ocks.org/gencay/4629518
 - stacked w/ labels: http://bl.ocks.org/juan-cb/43f10523858abf6053ae
 - scale.ordinal vs. scaleBand: http://stackoverflow.com/questions/37548408/d3-4-0-rangeroundbands-equivalent
+- example in dimple.js: https://discussions.udacity.com/t/final-project-start/203226/10
 
 CSS:
 - http://stackoverflow.com/questions/5703552/css-center-text-horizontal-and-vertical-inside-a-div-block 
