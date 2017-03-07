@@ -13,7 +13,9 @@ In response to feedback on the first iteration, in the second iteration (index_v
 
 I then decided that a different approach better answered my question of: was it women and children first, or did class play a part. In the final iteration of my visualization (index_v3.html), I start with survival rates by sex for each age group, then allow the viewer to click through the class to see how these rates change by the passengers' ticket class. 
 
-I think this final iteration provides a more clear demonstration that women have higher survival rates across all ages. Looking at all classes, women and men have opposite survival patterns in regards to age: as women age their chances of survival increase, while as men age there changes broadly decrease. Viewing the data by class reveals substantial differences in survival between classes -- with first class having higher survival rates across age and sex. Second class passengers had high survival rates for women, but very low for men. In the third class, both men and women had quite low survival rates, excusing the sole woman in the 3rd class, 61-80 age range who's survival resulted in a 100% survival rate.
+I think the third iteration provides a more clear demonstration that women have higher survival rates across all ages. Looking at all classes, women and men have opposite survival patterns in regards to age: as women age their chances of survival increase, while as men age there changes broadly decrease. Viewing the data by class reveals substantial differences in survival between classes -- with first class having higher survival rates across age and sex. Second class passengers had high survival rates for women, but very low for men. In the third class, both men and women had quite low survival rates, excusing the sole woman in the 3rd class, 61-80 age range who's survival resulted in a 100% survival rate.
+
+In response to reviewer feedback, I created the fourth iteration, in which I added brief commentary text on the findings for each of the classes which appeared when the buttons were clicked. 
 
 ## Feedback
 I collected feedback from five friends on the first iteration of the visualization (index_v1), summarized below. 
@@ -29,6 +31,10 @@ I collected feedback from five friends on the first iteration of the visualizati
 - Might the surprising survival rates simply be because of small  sample sizes.
 - Show bigger space between classes.
 
+Feedback from the udacity reviewer ont he third iteration of the visualizations (index_v3):
+- Correct the tooltips values for 'All' class category.
+- Add text to visualization explaining my findings.
+- Add more comments throughout the code, remove redundant code, clean/remove debugger and console commands. 
 
 ## Resources
 Titanic facts
@@ -60,6 +66,7 @@ Axes
 
 Html: 
 - https://www.w3schools.com/jsref/jsref_slice_array.asp
+- Breaks in text: http://stackoverflow.com/questions/13049050/can-you-insert-a-line-break-in-text-when-using-d3-js
 
 Tooltips:
 - http://www.d3noob.org/2013/01/adding-tooltips-to-d3js-graph.html
@@ -72,3 +79,6 @@ Adding labels/text to plot
 
 x vs. dx
 - http://stackoverflow.com/questions/19127035/what-is-the-difference-between-svgs-x-and-dx-attribute
+
+Colors:
+- http://colorbrewer2.org/#type=sequential&scheme=BuGn&n=3
