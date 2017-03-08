@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<style>
+        h2 {
+            text-align: center;
+            font-family: Georgia;
+        }
+
+        p {
+            text-align: left;
+            margin-left: 2cm;
+            font: sans-serif;
+        }
+
+        body {
+            text-align: left;
+            margin-left: .5cm;
+            margin-right: .5cm;
+            font-family: Tahoma;
+        }
+    
+        div.class_buttons {
+            position: fixed;
+            top: 150px;
+            left: 10px;
+        }
+
+        div.class_buttons div {
+            background-color: #D3D3D3;
+            padding: 10px; /*size of buttons around text*/
+            margin: 15px; /*vertical space b/t buttons*/
+            text-align: center;
+            vertical-align: middle;
+            /*ref:http://stackoverflow.com/questions/5703552/css-center-text-horizontal-and-vertical-inside-a-div-block */
+            /*border-style: solid;
+            border-width: 2px;
+            /*ref: https://www.w3schools.com/css/css_border.asp*/
+          }
+
+        .axis path, 
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }  
+
+        .axis text {
+            font-family: sans-serif;
+            font-size: 12px;
+        }  
+
+        .toolTip {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                position: absolute;
+                display: none;
+                width: auto;
+                height: auto;
+                background: none repeat scroll 0 0 white;
+                border: 0 none;
+                border-radius: 8px 8px 8px 8px;
+                box-shadow: -3px 3px 15px #888888;
+                color: black;
+                font: 12px sans-serif;
+                padding: 5px;
+                text-align: center;
+        }
+
+	</style>
+	<script src="http://d3js.org/d3.v4.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/1.7.0/d3-legend.min.js"></script> 
+</head>
+<body>
+	<script>
+        d3.select('body')
+            .append('h2')
+            .text('Titanic Survival Rates by Class and Sex'); 
+
+        d3.select('body')
+            .append('p')
+            .html('In 1912, the RMS Titanic sank in the North Atlantic Ocean after colliding with an iceberg. Of the 2,224 people people aboard, only 706 survived. Is the call to save "women and children first" demonstrated by the data? Did socioeconomic status--ticket class--also have an effect on survival rates?' + "<br/>" + "<br/>" + ' The following charts demonstrate how the survival rate differed for passengers depending on their sex, age, and ticket class. Click on the buttons to the left to see how survival rates differed for passengers depending on the class of their ticket.');
+        //Ref: http://www.titanicfacts.net/titanic-survivors.html
+        //Ref: https://en.wikipedia.org/wiki/RMS_Titanic
+
+        var margin = { //adjust margins on left right to make room for legend and buttons
+            top: 20,
+            right: 150,
+            bottom: 30,
+            left: 150
+        },
+            width = 960 - margin.left - margin.right, 
+            height = 500 - margin.top - margin.bottom;
+
+        var x0 = d3.scaleBand( )
+                .rangeRound( [ 0, width ])
+                .paddingInner(0.15); //space between agegroup bar sets
+
+        var x1 = d3.scaleBand( )
+                .padding(0.05); //space between sex bars within age groups
+
+        var y = d3.scaleLinear( )
+                .range( [ height, 0 ] );
+
+        var color = d3.scaleOrdinal( )
+                .range( [ "#bdbdbd", "#f0f0f0", "#bcbddc", "#efedf5"] ); 
+
+        var svg = d3.select( "body" )
+                .append( "svg" )
+                .attr( "width", width + margin.left + margin.right )
+                .attr( "height", height + margin.top + margin.bottom ).append( "g" )
+                .attr( "transform", "translate(" + margin.left + "," + margin.top + ")" )
+                .attr('id','svg');
+
+        var yBegin;
+
+        var divTooltip = d3.select("body")
+            .append("div")
+            .attr("class", "toolTip");
+    
+        d3.csv( "titanic_class_wide.csv", function( error, original_data ) {
+            //Filter function, for all data in first chart, then used for buttons
+            function filterData( data, variable, value ) {
+                var newData = data.filter( function( row ) {
+                    if( row[ variable ] == value ) {
+                        return row;
+                    };
+                } );
+                return newData;
+            }
+            
+            // First chart: filter for all classes
+            var data = filterData(original_data, "Pclass", "All" );  
+
+            // Stacked inner column values, for each age range
+            var innerColumns = {
+                "column1": [ "Survived Female", "Died Female" ], 
+                "column2": [ "Survived Male", "Died Male" ]
+            };
+
+            var columnHeaders = [ "Survived Female", "Died Female", "Survived Male", "Died Male" ]
+
+            
+            //Function to create chart based on filtered dataset
+            function create_chart( dataset ) {
+                dataset.forEach( function( d ) {
+                    var yColumn = new Array( );
+                    d.columnDetails = columnHeaders.map( function( name ) {
+                        for( ic in innerColumns ) {
+                            if( $.inArray( name, innerColumns[ ic ] ) >= 0 ) {
+                                if( !yColumn[ ic ] ) {
+                                    yColumn[ ic ] = 0;
+                                }
+                                yBegin = yColumn[ ic ];
+                                yColumn[ ic ] += +d[ name ];
+                                return {
+                                    name: name,
+                                    column: ic,
+                                    yBegin: yBegin,
+                                    yEnd: +d[ name ] + yBegin,
+                                };
+                            }
+                        }
+                    } );
+                    
+                    d.total = d3.max( d.columnDetails, function( d ) {
+                        return d.yEnd;
+                    } );
+                } );
+
+                // Age groups on x axis
+                x0.domain( dataset.map( function( d ) {
+                    return d.AgeGroup;
+                } ) );
+                
+                // Sex within age groups on x axis
+                x1.domain( d3.keys( innerColumns ) )
+                    .rangeRound( [ 0, x0.bandwidth( ) ] );
+
+                // Survival/death rate for each group on y axis
+                y.domain( [ 0, d3.max( dataset, function( d ) {
+                    return d.total;
+                } ) ] );
+
+                //Format x axis
+                svg.append( "g" )
+                    .attr( "class", "x axis" )
+                    .attr( "transform", "translate(0," + height + ")" )
+                    .call(d3.axisBottom(x0));
+
+                //Format y axis
+                svg.append( "g" )
+                    .attr( "class", "y axis" )
+                    .call( d3.axisLeft(y).ticks(10, "%") ) //10 ticks on y-axis, make decimal into percentage
+                    .append( "text" )
+                    .attr( "transform", "rotate(-90)" )
+                    .attr( "y", 6 )
+                    .attr( "dy", ".7em" )
+                    .style( "text-anchor", "end" )
+                    .text( "" );
+
+                // create stacked bars
+                var project_stackedbar = svg.selectAll( ".project_stackedbar" ).data( dataset )
+                    .enter( )
+                    .append( "g" )
+                    .attr( "class", "g" )
+                    .attr( "transform", function( d ) {
+                        return "translate(" + x0( d.AgeGroup ) + ",0)";
+                    } );
+
+                project_stackedbar.selectAll( "rect" )
+                    .data( function( d ) {
+                        return d.columnDetails;
+                    } )
+                    .enter( )
+                    .append( "rect" )
+                    .attr( "width", x1.bandwidth( ) )
+                    .attr( "x", function( d ) {
+                        return x1( d.column );
+                    } )
+                    .attr( "y", function( d ) {
+                        return y( d.yEnd );
+                    } )
+                    .attr( "height", function( d ) {
+                        return y( d.yBegin ) - y( d.yEnd );
+                    } )
+                    .style( "fill", function( d ) {
+                        return color( d.name );
+                    } );
+
+            //Mouseover tooltips: http://bl.ocks.org/juan-cb/43f10523858abf6053ae
+                project_stackedbar.on("mousemove", function(d){
+                    divTooltip.style("left", d3.event.pageX+10+"px");
+                    divTooltip.style("top", d3.event.pageY-25+"px");
+                    divTooltip.style("display", "inline-block");
+                    var elements = document.querySelectorAll(':hover');
+                    l = elements.length
+                    l = l-1
+                    element = elements[l].__data__
+                    value = element.yEnd - element.yBegin
+                    // Show values for survival/death rate, # in group, # in bar total
+                    if (element.name == 'Survived Female') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Female Survivors: "+Math.round(d['NSurv Female'])+"<br>"+"Female Total: "+Math.round(d['Total Female']));
+                    } else if (element.name == 'Died Female') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Female Deaths: "+Math.round(d['NDied Female'])+"<br>"+"Female Total: "+Math.round(d['Total Female']));
+                    } else if (element.name == 'Survived Male') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Male Survivors: "+Math.round(d['NSurv Male'])+"<br>"+"Male Total: "+Math.round(d['Total Male']));
+                    } else if (element.name == 'Died Male') {
+                        divTooltip.html(element.name+"<br>"+Math.round(value*100)+"%"+"<br>"+"Male Deaths: "+Math.round(d['NDied Male'])+"<br>"+"Male Total: "+Math.round(d['Total Male']));
+                    }   
+
+                });
+                // Tooltip disappears when not mouse-ing over
+                project_stackedbar.on("mouseout", function(d){
+                    divTooltip.style("display", "none");
+                });
+
+                //Create legend
+                var legend = svg.selectAll(".legend")
+                    .data(columnHeaders.slice())
+                    .enter()
+                    .append("g")
+                    .attr("class","legend")
+                    .attr("transform", function(d, i) { 
+                        return "translate(0," + i * 20 + ")"; //num determines how much space between labels
+                    });
+
+                legend.append("rect") //num is width/height of rectangle
+                    .attr("x", width+125)
+                    .attr("width", 19)
+                    .attr("height", 19)
+                    .attr("fill", color);
+
+                legend.append("text")
+                    .attr("x", width + 120)
+                    .attr("y", 9.5)
+                    .attr("dy", "0.32em")
+                    .style("text-anchor", "end")
+                    .text(function(d) { return d; }); 
+        }
+
+        create_chart(data);
+
+        //ADDING THE BUTTONS AND VARIABLE AGE DATA
+            var classes = ['All','1st','2nd','3rd']
+
+            //Adding buttons
+            var buttons = d3.select("body")
+                            .append("div")
+                            .attr("class", "class_buttons")
+                            .selectAll("div")
+                            .data(classes) 
+                            .enter()
+                            .append("div")
+                            .text(function(d) {
+                                return d;
+                            })
+                            .style("opacity","1");
+
+            //add onclick handler
+            buttons.on("click", function(d) {
+                //set 'unclicked' format
+                d3.select(".class_buttons")
+                    .selectAll("div")
+                    .transition()
+                    .duration(500)
+                    .style("color","black")
+                    .style("background-color", "#D3D3D3");
+
+                d3.select(this)
+                    .transition()
+                    .duration(500)
+                    .style("background-color", "#708090")
+                    .style("color","white");
+
+                // select the text for this button            
+                var t = this.innerText; 
+
+                // Change text based on which button is clicked
+                if( t == 'All' ) {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Age and Sex: All Passenger Classes')
+                    d3.select('p')
+                        .html('Across all classes, women have a higher likelihood of survival. However, women and men appear to have opposite survival patterns in regards to age: as women age their chances of survival increase, while as men age there chances broadly decrease.'+"<br/>")         
+                        //    </b>
+                }
+                else if (t == '1st') {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Age and Sex: '+t+'  class passengers')
+                    d3.select('p')
+                        .html('In first class, women and men have higher survival rates across all ages as compared to the rest of the passengers. Women still have a substantial advantage over men across age groups, apart from 0-15 years, which has a very small sample size, but a notably high survival rate for both sexes.'+"<br/>")
+                }
+
+                else if (t == '2nd') {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Age and Sex: '+t+'  class passengers')
+                    d3.select('p')
+                        .html('In second class, women have the most notable advantage over men. Female survival rates are nearly as high as those in first class, whereas the survival rate for men from ages 15-60 are much lower. Despite a small sample size, it is interesting to note that 100% of male and female children under 15 survived in 2nd class.'+"<br/>")
+                }
+
+                else if (t == '3rd') {
+                    d3.select('h2')
+                        .text('Titanic Survival Rates by Age and Sex: '+t+'  class passengers')
+                    d3.select('p')
+                        .html('In third class, both women and men fare far worse than their first and second class counterparts, apart from the one woman in the oldest age group who survived. '+"<br/>"+"<br/>")
+                }
+
+                // Filter data based on button click
+                var newData = filterData(original_data, "Pclass", t);
+
+                // remove all elements from the svg (i.e. previous charts)
+                d3.selectAll( "#svg > *").remove() 
+
+                var yBegin;
+
+                create_chart(newData);
+              
+            });
+
+        });
+
+	</script>
+</body>
+
+</html>
